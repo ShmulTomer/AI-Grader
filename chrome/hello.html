@@ -1,5 +1,41 @@
+<!DOCTYPE html>
 <html>
-  <body>
-    <h1>Hello Extensions</h1>
-  </body>
+<head>
+    <title>AI Grader Settings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 250px;
+            margin: 10px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Grader</h1>
+    <form id="settingsForm">
+        <label for="apiKey">OpenAI API Key:</label>
+        <input type="text" id="apiKey" name="apiKey" placeholder="sk-..." required>
+
+        <label for="solutionImage">Solution Image (optional):</label>
+        <input type="file" id="solutionImage" name="solutionImage" accept="image/*">
+
+        <button type="submit">Save</button>
+    </form>
+</body>
+<script src="popup.js"></script>
 </html>

@@ -1,0 +1,4 @@
+
+Gradescope gives a lot of data in the data-class JSON:
+
+- use the assignment type to determine the type of question
