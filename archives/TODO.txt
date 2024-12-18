@@ -1,0 +1,29 @@
+TODO
+
+
+- Better transcription of handwriting
+- the UI for selecting the question can be creating a box on the image
+
+
+
+What are the steps:
+1. Get the question and solution
+2. Transcribe all the students' answers
+3. Add a rubric or suggest a rubric for the question
+4. Score each student's answer
+5. Provide analytics and the ability to go through and ensure accuracy (compare to known grades)
+
+
+Run many times to understand the accuracy of the grading (this can also be done for normal grading, and inconsistent ones can be flagged!)
+
+
+What are types of questions:
+
+- True/False
+- Multiple choice
+- Short answer
+- Long answer
+- Proof
+- Calculation
+- Graphing
+- Multiple parts that are dependent (ignore for now)
