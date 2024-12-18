@@ -10,7 +10,8 @@
     "permissions": [
       "activeTab",
       "scripting",
-      "storage"
+      "storage",
+      "tabs"
     ],
     "host_permissions": [
       "*://production-gradescope-uploads.s3-us-west-2.amazonaws.com/*"

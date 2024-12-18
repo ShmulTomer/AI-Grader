@@ -1,33 +1,38 @@
 console.log("START RUN");
 
-window.onload = function() {
-    // TODO: Have this only run when the toggle is on in the hello.html page
-    console.log("Content script loaded");
+// Listen for messages from hello.html (popup or background)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log("Message received in content script:", request);
 
-    // Get the question number from the page
-    let questionNumber = document.querySelector('.submissionGrader--questionSwitcherHeading span span').textContent.trim();
-    questionNumber = questionNumber.split("Select to navigate to a different question from this student's submission.")[0];
+    if (request.action === "runGrading") {
+        console.log("Running grading process...");
+        runGrading();
+    }
+});
 
-    // Select the SubmissionGrader div
+async function runGrading() {
+    console.log("Content script running grading process...");
+
+    let questionNumber = '';
+    const questionElement = document.querySelector('.submissionGrader--questionSwitcherHeading span span');
+    if (questionElement) {
+        questionNumber = questionElement.textContent.trim().split("Select to navigate to a different question from this student's submission.")[0];
+    }
+
     const submissionGraderDiv = document.querySelector('div[data-react-class="SubmissionGrader"]');
-
     let rubricText = [];
     if (submissionGraderDiv) {
-        // Parse the JSON data from the data-react-props attribute
         const dataString = submissionGraderDiv.getAttribute('data-react-props');
         const data = JSON.parse(dataString);
 
         const itemGroups = data.rubric_item_groups || [];
         const items = data.rubric_items || [];
 
-        // Separate top-level items (no group_id) from grouped items
         const topLevelItems = items.filter(i => i.group_id === null);
         const groupedItems = items.filter(i => i.group_id !== null);
 
-        // Build an array of top-level entries (both items and groups)
         const topLevelEntries = [];
 
-        // Add top-level items
         topLevelItems.forEach(i => {
             topLevelEntries.push({
                 type: 'item',
@@ -37,7 +42,6 @@ window.onload = function() {
             });
         });
 
-        // Add groups
         itemGroups.forEach(g => {
             topLevelEntries.push({
                 type: 'group',
@@ -48,10 +52,8 @@ window.onload = function() {
             });
         });
 
-        // Sort top-level entries by their position to preserve original order
         topLevelEntries.sort((a, b) => a.position - b.position);
 
-        // For each group, we'll need to find its subitems and sort them by position
         const itemsByGroupId = new Map();
         groupedItems.forEach(i => {
             if (!itemsByGroupId.has(i.group_id)) {
@@ -60,18 +62,14 @@ window.onload = function() {
             itemsByGroupId.get(i.group_id).push(i);
         });
 
-        // Sort each group's items by position
         for (const [gid, arr] of itemsByGroupId.entries()) {
             arr.sort((a, b) => a.position - b.position);
         }
 
-        // Build the rubric text in the correct order
         topLevelEntries.forEach(entry => {
             if (entry.type === 'item') {
-                // Just a top-level standalone item
                 rubricText.push(`Item: ${entry.description} (Deduct ${entry.weight} points)`);
             } else {
-                // A group
                 rubricText.push(`Group ${entry.position}: ${entry.description}`);
                 const subItems = itemsByGroupId.get(entry.id) || [];
                 subItems.forEach((si, idx) => {
@@ -79,19 +77,15 @@ window.onload = function() {
                 });
             }
         });
-    } else {
-        console.log('No SubmissionGrader element found.');
     }
 
     const answerTranscriptionPromise = new Promise((resolve) => {
         setTimeout(async function() {
-            // Select the image element for student's answer
             const imageElement = document.querySelector('.pv--viewport img');
             if (imageElement) {
                 const imageUrl = imageElement.src;
                 console.log('Image URL in content script:', imageUrl);
 
-                // Send a message to background script to fetch the image
                 chrome.runtime.sendMessage({action: "fetchImage", url: imageUrl}, async (response) => {
                     if (response && response.base64Image) {
                         const base64Image = response.base64Image;
@@ -125,16 +119,15 @@ window.onload = function() {
         });
     });
 
-    // After both transcriptions are done, call the grading API
-    Promise.all([answerTranscriptionPromise, solutionTranscriptionPromise])
-        .then(async ([answerTranscription, solutionTranscription]) => {
-            console.log("Answer Transcription:", answerTranscription);
-            console.log("Solution Transcription:", solutionTranscription);
+    const [answerTranscription, solutionTranscription] = await Promise.all([answerTranscriptionPromise, solutionTranscriptionPromise]);
 
-            // Construct the grading prompt
-            const rubricString = rubricText.join('\n');
-            console.log("Rubric String:", rubricString);
-            const gradingPrompt = `
+    console.log("Answer Transcription:", answerTranscription);
+    console.log("Solution Transcription:", solutionTranscription);
+
+    const rubricString = rubricText.join('\n');
+    console.log("Rubric String:", rubricString);
+
+    const gradingPrompt = `
 Your role is to be an accurate and fair grader for an Automata & Complexity Theory computer science college course.
 
 Given:
@@ -145,36 +138,36 @@ The rubric is as follows:
 ${rubricString}
 
 Provide which rubric items you would select (i.e. dock points for) and comments on errors, if any. Do not hesitate to dock points. For the comments, be as specific as possible and stay ***VERY*** brief, talking in POV to the student. Only comment on the error, and nothing else (MAX 2 sentences).
-            `;
+    `;
 
-            // Call the OpenAI API to get the final grade and comment
-            const gradingResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer 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`
-                },
-                body: JSON.stringify({
-                    model: "gpt-4o-mini", 
-                    messages: [
-                        {
-                            role: "user",
-                            content: gradingPrompt
-                        }
-                    ],
-                    temperature: 0.7
-                })
-            });
+    const gradingResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer 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`
+        },
+        body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+                {
+                    role: "user",
+                    content: gradingPrompt
+                }
+            ],
+            temperature: 0.7
+        })
+    });
 
-            const gradingResult = await gradingResponse.json();
-            const finalGradeAndComments = gradingResult.choices[0].message.content;
-            console.log("Final Grade and Comments:", finalGradeAndComments);
+    const gradingResult = await gradingResponse.json();
+    const finalGradeAndComments = gradingResult.choices[0].message.content;
+    console.log("Final Grade and Comments:", finalGradeAndComments);
 
-            // Here you have the final grade and comments. You could display them in the UI, send them elsewhere, etc.
-        });
-};
-
-
+    // Send results back to hello.html
+    chrome.runtime.sendMessage({
+        action: 'gradingComplete',
+        results: finalGradeAndComments
+    });
+}
 
 async function transcribeImage(base64Image, questionNumber) {
     let prompt = `Transcribe the answer to question ${questionNumber}, using LaTeX format only when necessary for equations. Only give the transcription, no other text.`;
@@ -185,7 +178,7 @@ async function transcribeImage(base64Image, questionNumber) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer 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` // Replace with your actual API key
+            'Authorization': `Bearer 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`
         },
         body: JSON.stringify({
             model: "gpt-4o-mini",
@@ -211,6 +204,5 @@ async function transcribeImage(base64Image, questionNumber) {
     const result = await apiResponse.json();
     return result.choices[0].message.content;
 }
-
 
 console.log("END RUN3");
