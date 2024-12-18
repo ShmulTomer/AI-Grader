@@ -13,6 +13,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function runGrading() {
     console.log("Content script running grading process...");
 
+
+    let apiKey = '';
+    let extraInstructions = '';
+    let solutionImage = '';
+
+    // Wait for storage retrieval
+    const storedData = await new Promise((resolve) => {
+        chrome.storage.sync.get(['openaiApiKey', 'extraInstructions', 'solutionImage'], (data) => {
+            resolve(data);
+        });
+    });
+
+    apiKey = storedData.openaiApiKey;
+    extraInstructions = storedData.extraInstructions || '';
+    solutionImage = storedData.solutionImage; // Must match key used when saving image data
+
+    if (!apiKey) {
+        console.error('No OpenAI API key found. Please set one in the popup.');
+        return;
+    }
+
     let questionNumber = '';
     const questionElement = document.querySelector('.submissionGrader--questionSwitcherHeading span span');
     if (questionElement) {
@@ -89,7 +110,7 @@ async function runGrading() {
                 chrome.runtime.sendMessage({action: "fetchImage", url: imageUrl}, async (response) => {
                     if (response && response.base64Image) {
                         const base64Image = response.base64Image;
-                        const answerTranscription = await transcribeImage(base64Image, questionNumber);
+                        const answerTranscription = await transcribeImage(base64Image, apiKey, questionNumber);
                         resolve(answerTranscription);
                     } else {
                         console.error('No response or no base64 image returned from background');
@@ -103,20 +124,15 @@ async function runGrading() {
         }, 1000);
     });
 
-    const localImageUrl = chrome.runtime.getURL('solution.png');
-    console.log('Local image URL:', localImageUrl);
 
-    const solutionTranscriptionPromise = new Promise((resolve) => {
-        chrome.runtime.sendMessage({ action: "fetchImage", url: localImageUrl }, async (response) => {
-            if (response && response.base64Image) {
-                const base64Image = response.base64Image;
-                const solutionTranscription = await transcribeImage(base64Image, questionNumber);
-                resolve(solutionTranscription);
-            } else {
-                console.error('No response or no base64 image returned from background for local image');
-                resolve("");
-            }
-        });
+    const solutionTranscriptionPromise = new Promise(async (resolve) => {
+        if (solutionImage) {
+            const solutionTranscription = await transcribeImage(solutionImage, apiKey, questionNumber);
+            resolve(solutionTranscription);
+        } else {
+            console.error('No solution image found in storage');
+            resolve("");
+        }
     });
 
     const [answerTranscription, solutionTranscription] = await Promise.all([answerTranscriptionPromise, solutionTranscriptionPromise]);
@@ -138,13 +154,24 @@ The rubric is as follows:
 ${rubricString}
 
 Provide which rubric items you would select (i.e. dock points for) and comments on errors, if any. Do not hesitate to dock points. For the comments, be as specific as possible and stay ***VERY*** brief, talking in POV to the student. Only comment on the error, and nothing else (MAX 2 sentences).
+    Response should strictly in the format:
+    "Select rubric items:
+    <item 1>
+    <item 2>
+    ...
+
+    Comments:
+    <comment 1>
+
+    Extra Instructions:
+    ${extraInstructions}
     `;
 
     const gradingResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer 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`
+            'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
             model: "gpt-4o-mini",
@@ -169,7 +196,7 @@ Provide which rubric items you would select (i.e. dock points for) and comments 
     });
 }
 
-async function transcribeImage(base64Image, questionNumber) {
+async function transcribeImage(base64Image, apiKey, questionNumber) {
     let prompt = `Transcribe the answer to question ${questionNumber}, using LaTeX format only when necessary for equations. Only give the transcription, no other text.`;
     if (!questionNumber) {
         prompt = `Transcribe this image, using LaTeX format only when necessary for equations. Only give the transcription, no other text.`;
@@ -178,7 +205,7 @@ async function transcribeImage(base64Image, questionNumber) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer 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`
+            'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
             model: "gpt-4o-mini",
