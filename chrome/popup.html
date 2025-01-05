@@ -1,0 +1,73 @@
+<!-- popup.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grading Assistant</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Grading Assistant</h2>
+
+        <!-- Question Profile Section -->
+        <fieldset class="profile-section">
+            <legend>Question Profile</legend>
+
+            <!-- Profile Selection -->
+            <div class="section">
+                <label for="profileSelect">Select Profile:</label>
+                <select id="profileSelect">
+                    <option value="" disabled selected>Select a profile</option>
+                    <!-- Options will be populated dynamically -->
+                </select>
+                <button id="createProfileBtn" class="small-btn">Create New Profile</button>
+            </div>
+
+            <!-- Solution Input -->
+            <div class="section">
+                <label for="solutionInput">Enter Solution:</label>
+                <textarea id="solutionInput" rows="4" placeholder="Type your solution here..."></textarea>
+            </div>
+
+            <!-- Rubric Input -->
+            <div class="section">
+                <label for="rubricDisplay">Rubric:</label>
+                <button id="grabRubricBtn" class="small-btn">Grab Rubric from Page</button>
+                <textarea id="rubricDisplay" rows="4" placeholder="Rubric will appear here..."></textarea>
+            </div>
+
+            <!-- Extra Grading Instructions -->
+            <div class="section">
+                <label for="extraInstructions">Question-Specific Grading Instructions:</label>
+                <textarea id="extraInstructions" rows="3" placeholder="Additional instructions..."></textarea>
+            </div>
+        </fieldset>
+
+        <!-- Global Settings Section -->
+        <fieldset class="global-section">
+            <legend>Global Settings</legend>
+
+            <!-- OpenAI API Key -->
+            <div class="section">
+                <label for="apiKey">OpenAI API Key:</label>
+                <input type="password" id="apiKey" placeholder="Enter your API key...">
+            </div>
+
+            <!-- Default Grading Instructions -->
+            <div class="section">
+                <label for="defaultInstructions">Default Grading Instructions:</label>
+                <textarea id="defaultInstructions" rows="3" placeholder="Default instructions..."></textarea>
+            </div>
+        </fieldset>
+
+        <!-- Run Button -->
+        <button id="runBtn">Run Grading</button>
+
+        <!-- Status Section -->
+        <div id="status"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

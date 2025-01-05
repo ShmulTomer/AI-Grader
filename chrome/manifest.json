@@ -1,30 +1,26 @@
 {
-    "name": "AI Grader",
-    "description": "Base Level Extension",
-    "version": "1.0",
     "manifest_version": 3,
-    "action": {
-      "default_popup": "hello.html",
-      "default_icon": "hello_extensions.png"
-    },
+    "name": "AI Teaching Assistant",
+    "version": "1.0",
+    "description": "Grade solutions based on rubrics using OpenAI API.",
     "permissions": [
-      "activeTab",
-      "scripting",
-      "storage",
-      "tabs"
-    ],
-    "host_permissions": [
-      "*://production-gradescope-uploads.s3-us-west-2.amazonaws.com/*"
-    ],
+        "activeTab",
+        "scripting",
+        "storage",
+        "tabs"
+      ],
+      "action": {
+      "default_popup": "popup.html",
+      "default_icon": "icon.png"
+    },
     "background": {
       "service_worker": "background.js"
     },
     "content_scripts": [
-      {
-        "matches": ["*://www.gradescope.com/*"],
-        "js": ["content.js"],
-        "run_at": "document_end"
-      }
-    ]
+        {
+          "matches": ["<all_urls>"],
+          "js": ["contentScript.js"]
+        }
+      ] 
   }
   

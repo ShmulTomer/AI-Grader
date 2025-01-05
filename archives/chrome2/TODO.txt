@@ -1,0 +1,5 @@
+
+Gradescope gives a lot of data in the data-class JSON:
+
+- use the assignment type to determine the type of question
+- give the user the ability to add extra prompting to the rubric directions (e.g. ignore so and so errors)
